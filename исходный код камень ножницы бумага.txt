@@ -1,0 +1,131 @@
+#include "raylib.h"
+#include <stdlib.h>
+#include <time.h>
+
+typedef enum { ROCK = 0, PAPER, SCISSORS, CHOICE_COUNT } Choice;
+
+Choice GetComputerChoice() {
+    return (Choice)GetRandomValue(0, CHOICE_COUNT - 1);
+}
+
+const char* DetermineWinner(Choice player, Choice computer, int* wins, int* losses, int* draws) {
+    if (player == computer) {
+        (*draws)++;
+        return "Draw!";
+    } else if ((player == ROCK && computer == SCISSORS) ||
+               (player == PAPER && computer == ROCK) ||
+               (player == SCISSORS && computer == PAPER)) {
+        (*wins)++;
+        return "You Win!";
+    } else {
+        (*losses)++;
+        return "You Lose!";
+    }
+}
+
+int main() {
+    const int screenWidth = 800;
+    const int screenHeight = 600;
+    InitWindow(screenWidth, screenHeight, "Rock Paper Scissors - Raylib");
+    SetTargetFPS(60);
+
+
+    Texture2D rockSprite = LoadTexture("resources/rock.png");
+    Texture2D paperSprite = LoadTexture("resources/paper.png");
+    Texture2D scissorsSprite = LoadTexture("resources/scissors.png");
+    Texture2D background = LoadTexture("resources/background.png");
+
+    InitAudioDevice();
+    Sound soundRock = LoadSound("resources/rock.wav");
+    Sound soundPaper = LoadSound("resources/paper.wav");
+    Sound soundScissors = LoadSound("resources/scissors.wav");
+    Sound soundWin = LoadSound("resources/win.wav");
+    Sound soundLose = LoadSound("resources/lose.wav");
+    Sound soundDraw = LoadSound("resources/draw.wav");
+
+    Rectangle rockButton = {screenWidth / 2 - 150, 400, 100, 50};
+    Rectangle paperButton = {screenWidth / 2 - 50, 400, 100, 50};
+    Rectangle scissorsButton = {screenWidth / 2 + 50, 400, 100, 50};
+
+    Choice playerChoice = ROCK;
+    Choice computerChoice = ROCK;
+    const char* resultText = "";
+    bool gameStarted = false;
+
+    int wins = 0, losses = 0, draws = 0;
+
+    srand(time(NULL));
+
+    while (!WindowShouldClose()) {
+        BeginDrawing();
+        ClearBackground(RAYWHITE);
+        DrawTexture(background, 0, 0, WHITE);
+
+        if (!gameStarted) {
+            DrawText("Make your choice!", screenWidth / 2 - MeasureText("Make your choice!", 20) / 2, 50, 20, DARKGRAY);
+
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                Vector2 mouse = GetMousePosition();
+                if (CheckCollisionPointRec(mouse, rockButton)) {
+                    playerChoice = ROCK;
+                    PlaySound(soundRock);
+                } else if (CheckCollisionPointRec(mouse, paperButton)) {
+                    playerChoice = PAPER;
+                    PlaySound(soundPaper);
+                } else if (CheckCollisionPointRec(mouse, scissorsButton)) {
+                    playerChoice = SCISSORS;
+                    PlaySound(soundScissors);
+                }
+
+                if (CheckCollisionPointRec(mouse, rockButton) || CheckCollisionPointRec(mouse, paperButton) || CheckCollisionPointRec(mouse, scissorsButton)) {
+                    computerChoice = GetComputerChoice();
+                    resultText = DetermineWinner(playerChoice, computerChoice, &wins, &losses, &draws);
+                    if (resultText[4] == 'W') PlaySound(soundWin);
+                    else if (resultText[4] == 'L') PlaySound(soundLose);
+                    else PlaySound(soundDraw);
+                    gameStarted = true;
+                }
+            }
+
+            DrawRectangleRec(rockButton, LIGHTGRAY);
+            DrawRectangleRec(paperButton, LIGHTGRAY);
+            DrawRectangleRec(scissorsButton, LIGHTGRAY);
+
+            DrawText("Rock", rockButton.x + 10, rockButton.y + 15, 20, BLACK);
+            DrawText("Paper", paperButton.x + 10, paperButton.y + 15, 20, BLACK);
+            DrawText("Scissors", scissorsButton.x + 10, scissorsButton.y + 15, 20, BLACK);
+
+        } else {
+            DrawText(resultText, screenWidth / 2 - MeasureText(resultText, 40) / 2, 100, 40, RED);
+            DrawText(TextFormat("Wins: %d  Losses: %d  Draws: %d", wins, losses, draws), 10, 10, 20, DARKGRAY);
+            DrawText("Press SPACE to play again", screenWidth / 2 - MeasureText("Press SPACE to play again", 20) / 2, 500, 20, DARKGRAY);
+
+            // Рисуем выбор игрока и компьютера
+            DrawTexture(rockSprite, 100, 200, WHITE);
+            DrawTexture(paperSprite, 350, 200, WHITE);
+            DrawTexture(scissorsSprite, 600, 200, WHITE);
+
+            if (IsKeyPressed(KEY_SPACE)) {
+                gameStarted = false;
+                resultText = "";
+            }
+        }
+        EndDrawing();
+    }
+
+    UnloadTexture(rockSprite);
+    UnloadTexture(paperSprite);
+    UnloadTexture(scissorsSprite);
+    UnloadTexture(background);
+
+    UnloadSound(soundRock);
+    UnloadSound(soundPaper);
+    UnloadSound(soundScissors);
+    UnloadSound(soundWin);
+    UnloadSound(soundLose);
+    UnloadSound(soundDraw);
+
+    CloseAudioDevice();
+    CloseWindow();
+    return 0;
+}
